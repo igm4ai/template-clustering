@@ -122,8 +122,10 @@ def inquire_func():
         ).execute())
         min_samples = int(inquirer.number(
             message='Min samples of each cluster:',
+            default=5,
             float_allowed=False,
-            min_allowed=1,
+            min_allowed=2,
+            invalid_message='Min samples should be no less than 2.'
         ).execute())
         retval['eps'], retval['min_samples'] = eps, min_samples
         algo_title = f'{algorithm.upper()}(eps={eps!r}, min_samples={min_samples!r})'
