@@ -1,0 +1,5 @@
+inquirerpy>=0.3.3
+natsort
+pandas>=1.1
+numpy
+scikit-learn>=1.0.0
