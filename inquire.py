@@ -54,7 +54,6 @@ def inquire_func():
     file = inquirer.filepath(
         message='Select the data source:',
         default=file,
-        only_files=True,
         validate=_is_csv_file,
         invalid_message='Data source should be a readable csv file.',
     ).execute()
