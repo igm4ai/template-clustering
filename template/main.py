@@ -1,4 +1,5 @@
 import pandas as pd
+from ditk import logging
 from hbutils.color import rnd_colors
 from matplotlib import pyplot as plt
 from sklearn.cluster import KMeans, DBSCAN, OPTICS
@@ -9,36 +10,47 @@ from sklearn.preprocessing import StandardScaler
 from config import DATA_SOURCE_FILE, FEATURES
 
 if __name__ == '__main__':
+    logging.try_init_root(logging.INFO)
+
+    logging.info(f'Loading data from {DATA_SOURCE_FILE!r} ...')
     source = pd.read_csv(DATA_SOURCE_FILE)
     raw_data = source[FEATURES]
 
+    logging.info('Standardizing ...')
     standardize = StandardScaler()
     standardize.fit(raw_data)
     std_data = standardize.transform(raw_data)
 
     # {% if user.need_pca %}
+    logging.info('Reducing dimensions from {{len(user.features) | potc}} to {{user.pca_dims | potc}} with PCA ...')
     pca = PCA(n_components={{user.pca_dims | potc}})
     pca.fit(std_data)
     pca_data = pca.transform(std_data)
 
+    logging.info('Standardizing ...')
     standardize = StandardScaler()
     standardize.fit(pca_data)
     std_data = standardize.transform(pca_data)
     # {% endif %}
 
     # {% if user.algorithm == 'kmeans' %}
+    logging.info('Clustering with KMeans algorithm to {{user.clusters | potc}} parts ...')
     algo = KMeans(n_clusters={{user.clusters | potc}})
     # {% elif user.algorithm == 'dbscan' %}
+    logging.info('Clustering with DBSCAN algorithm ...')
     algo = DBSCAN(eps={{user.eps | potc}}, min_samples={{user.min_samples | potc}})
     # {% elif user.algorithm == 'optics' %}
+    logging.info('Clustering with OPTICS algorithm ...')
     algo = OPTICS(eps={{user.eps | potc}}, min_samples={{user.min_samples | potc}})
     # {% endif %}
     algo.fit(std_data)
     pred = algo.fit_predict(std_data)
 
-    dst = source.copy()
+    dst = source.copy(deep=False)
     dst['pred'] = pred
     # {% if user.need_tsne %}
+    logging.info('Reducing dimensions from {{len(user.features) | potc}} '
+                 'to {{user.tsne_dims | potc}} with TSNE for visualization ...')
     tsne = TSNE({{user.tsne_dims | potc}}, learning_rate='auto')
     visual_data = tsne.fit_transform(raw_data)
     # {% if user.tsne_dims == 2 %}
@@ -51,6 +63,7 @@ if __name__ == '__main__':
     # {% endif %}
     # {% endif %}
 
+    print('Visualizing ...')
     fig = plt.figure()
     # {% if (user.need_tsne and user.tsne_dims == 3) or (not user.need_tsne and len(user.features) == 3) %}
     ax = fig.add_subplot(projection='3d')
@@ -108,3 +121,5 @@ if __name__ == '__main__':
     # {% endif %}
     ax.legend()
     plt.show()
+
+    logging.info('Complete!')
