@@ -80,14 +80,15 @@ def inquire_func():
     ).execute()
     if need_pca:
         _min_s_dims, _default_dims, _max_s_dims = _get_target_dims(df[features], len(features), (2 / 3, 0.85, 0.95))
-        pca_dims = int(inquirer.number(
+        pca_dims = inquirer.number(
             message=f'Target dims for PCA (recommendation: {_min_s_dims} - {_max_s_dims})',
             default=int(_default_dims if pca_dims is None else pca_dims),
+            filter=int,
             float_allowed=False,
             min_allowed=1,
             max_allowed=len(features),
             invalid_message=f'Dims should be an integer within [{1}, {len(features)}].',
-        ).execute())
+        ).execute()
         retval['need_pca'], retval['pca_dims'] = True, pca_dims
     else:
         retval['need_pca'], retval['pca_dims'] = False, None
@@ -96,38 +97,47 @@ def inquire_func():
             message='Do you known exactly how many clusters are?',
     ).execute():  # kmeans
         retval['algorithm'] = 'kmeans'
-        clusters = int(inquirer.number(
+        print('KMeans algorithm will be used.')
+
+        clusters = inquirer.number(
             message='How many?',
+            filter=int,
             float_allowed=False,
             min_allowed=2,
-        ).execute())
+        ).execute()
         retval['clusters'] = clusters
         algo_title = f'KMeans(n_clusters={clusters!r})'
+        print(f'{algo_title} algorithm will be applied.')
 
     else:  # dbscan or optics
         if inquirer.confirm(
                 message='Is the distribution between different clusters uniform?',
         ).execute():  # dbscan
             algorithm = 'dbscan'
+            print('DBSCAN algorithm will be used.')
         else:  # optics
             algorithm = 'optics'
+            print('OPTICS algorithm will be used.')
         retval['algorithm'] = algorithm
 
-        eps = float(inquirer.number(
+        eps = inquirer.number(
             message='Eps value (after standardization):',
             default=0.2,
+            filter=float,
             float_allowed=True,
             min_allowed=0.0,
-        ).execute())
-        min_samples = int(inquirer.number(
+        ).execute()
+        min_samples = inquirer.number(
             message='Min samples of each cluster:',
             default=5,
+            filter=int,
             float_allowed=False,
             min_allowed=2,
             invalid_message='Min samples should be no less than 2.'
-        ).execute())
+        ).execute()
         retval['eps'], retval['min_samples'] = eps, min_samples
         algo_title = f'{algorithm.upper()}(eps={eps!r}, min_samples={min_samples!r})'
+        print(f'{algo_title} algorithm will be applied.')
 
     if len(features) > 3:
         tsne_dims: Optional[int] = int(inquirer.select(
@@ -142,7 +152,7 @@ def inquire_func():
 
     if inquirer.confirm(
             message=f'Algorithm {algo_title} will be used, confirm?',
-    ):
+    ).execute():
         return retval
     else:
         raise InquireRestart('Not confirmed.')
