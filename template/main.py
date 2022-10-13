@@ -1,3 +1,5 @@
+import pickle
+
 import pandas as pd
 from ditk import logging
 from hbutils.color import rnd_colors
@@ -7,7 +9,7 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn.preprocessing import StandardScaler
 
-from config import DATA_SOURCE_FILE, FEATURES
+from config import DATA_SOURCE_FILE, FEATURES, SAVE_FILE
 
 if __name__ == '__main__':
     logging.try_init_root(logging.INFO)
@@ -46,6 +48,7 @@ if __name__ == '__main__':
     algo.fit(std_data)
     pred = algo.fit_predict(std_data)
 
+    logging.info('Postprocessing the result ...')
     dst = source.copy(deep=False)
     dst['pred'] = pred
     # {% if user.need_tsne %}
@@ -62,6 +65,13 @@ if __name__ == '__main__':
     dst['_v_z'] = visual_data[:, 2]
     # {% endif %}
     # {% endif %}
+
+    logging.info(f'Saving the model and result to {SAVE_FILE!r} ...')
+    with open(SAVE_FILE, 'wb') as f:
+        pickle.dump({
+            'model': algo,
+            'result': dst,
+        }, file=f)
 
     print('Visualizing ...')
     fig = plt.figure()
