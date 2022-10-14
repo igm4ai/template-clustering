@@ -1,34 +1,11 @@
-import os.path
-from typing import Tuple, Optional, List
+from typing import Optional, List
 
-import numpy as np
 import pandas as pd
 from InquirerPy import inquirer
 from InquirerPy.base import Choice
 from igm.conf import InquireRestart
-from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
 
-
-def _normpath(path: str):
-    return os.path.normcase(os.path.expanduser(os.path.normpath(os.path.abspath(path))))
-
-
-def _is_csv_file(path: str):
-    return os.path.exists(path) and os.path.isfile(path) and os.access(path, os.R_OK) and \
-           os.path.splitext(os.path.normcase(path))[1] == '.csv'
-
-
-def _get_target_dims(df: pd.DataFrame, n_features: int, thresholds: Tuple[float, ...]) -> Tuple[int, ...]:
-    standardize = StandardScaler()
-    standardize.fit(df)
-    std_data = standardize.transform(df)
-
-    pca_all = PCA(n_features)
-    pca_all.fit(std_data)
-    evr = np.cumsum(pca_all.explained_variance_ratio_)
-    return tuple(np.searchsorted(evr, t) + 1 for t in thresholds)
-
+from utils import normpath, is_csv_file, recommend_pca_dims, prompt_with_help
 
 title = 'my-clustering'
 file = ''
@@ -54,11 +31,11 @@ def inquire_func():
     file = inquirer.filepath(
         message='Select the data source:',
         default=file,
-        validate=_is_csv_file,
+        validate=is_csv_file,
         invalid_message='Data source should be a readable csv file.',
     ).execute()
-    retval['data_source'] = _normpath(file)
-    is_file_changed = _normpath(last_file) != _normpath(file)
+    retval['data_source'] = normpath(file)
+    is_file_changed = normpath(last_file) != normpath(file)
 
     global features
     df: pd.DataFrame = pd.read_csv(file)
@@ -79,7 +56,7 @@ def inquire_func():
         default=need_pca,
     ).execute()
     if need_pca:
-        _min_s_dims, _default_dims, _max_s_dims = _get_target_dims(df[features], len(features), (2 / 3, 0.85, 0.95))
+        _min_s_dims, _default_dims, _max_s_dims = recommend_pca_dims(df[features], len(features), (2 / 3, 0.85, 0.95))
         pca_dims = inquirer.number(
             message=f'Target dims for PCA (recommendation: {_min_s_dims} - {_max_s_dims})',
             default=int(_default_dims if pca_dims is None else pca_dims),
@@ -99,12 +76,14 @@ def inquire_func():
         retval['algorithm'] = 'kmeans'
         print('KMeans algorithm will be used.')
 
-        clusters = inquirer.number(
+        clusters = prompt_with_help(inquirer.number(
             message='How many?',
             filter=int,
             float_allowed=False,
             min_allowed=2,
-        ).execute()
+        ), help_text="""
+        This is the help information of clusters.
+        """).execute()
         retval['clusters'] = clusters
         algo_title = f'KMeans(n_clusters={clusters!r})'
         print(f'{algo_title} algorithm will be applied.')
